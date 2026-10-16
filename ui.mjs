@@ -1,0 +1,45 @@
+import {PREFIX,catalog,fineWeights,newSet,createSession,readAll,latest,append,previousSets,performed,totalWeight,restore} from './core.mjs';
+const app=document.querySelector('#app'),error=document.querySelector('#error');
+let entries=[],sessions=[],active=null,exercise='smith',failed=false;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const date=s=>new Date(s).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'});
+const count=s=>Object.values(s.exercises).reduce((n,e)=>n+performed(e).length,0);
+function stop(e){failed=true;error.hidden=false;error.textContent=`保存・読み込みを停止しました。${e.message} この画面の入力は残しています。開き直す前に内容を控えてください。`;app.querySelectorAll('button,select,textarea,input').forEach(x=>x.disabled=true);}
+function reload(){entries=readAll(localStorage);sessions=latest(entries);}
+function save(next,reason){try{entries.push(append(localStorage,next,reason));sessions=latest(entries);active=next;return true;}catch(e){stop(e);return false;}}
+function change(fn,reason,render=true){if(failed)return;const next=structuredClone(active);next.revision++;fn(next);if(save(next,reason)){if(render)draw();else document.querySelector('#save-status').textContent='保存済み';}}
+function opts(values,value){return '<option value="">—</option>'+values.map(x=>`<option value="${x}" ${x===value?'selected':''}>${x}</option>`).join('');}
+function setDescription(r,i){return `${i+1}：${totalWeight(r)??'未選択'}kg × ${r.reps??'未選択'}回 ${r.up?'アップ':''} ${r.cancelled?'取り消し':r.done?'実施済み':'未実施'}`;}
+function draw(){
+ if(!active){app.innerHTML=`<h2>今日鍛える部位</h2><div class="parts"><label><input type="checkbox" value="胸" checked>胸</label><label><input type="checkbox" value="三頭筋">三頭筋</label></div><button class="wide primary" id="start">開始する</button>${sessions.some(s=>!s.endedAt)?'<h2>途中の記録</h2>':''}${sessions.filter(s=>!s.endedAt).map(s=>sessionButton(s,'続きを記録する')).join('')}<h2>過去の記録</h2>${sessions.filter(s=>s.endedAt).map(s=>sessionButton(s)).join('')||'<p class="sub">終了した記録はまだありません</p>'}`;return;}
+ if(!active.exercises[exercise])exercise=Object.keys(active.exercises)[0];
+ const e=active.exercises[exercise],c=catalog[exercise];
+ app.innerHTML=`<button id="home">‹ 記録一覧へ</button><p class="sub">${esc(date(active.startedAt))} ／ ${active.endedAt?'終了済み・修正可能':'記録中'}<br>${active.parts.join('・')} ／ 実施済み ${count(active)}セット</p><label for="exercise">種目</label><select id="exercise">${Object.keys(active.exercises).map(k=>`<option value="${k}" ${k===exercise?'selected':''}>${catalog[k].name}</option>`).join('')}</select><p class="sub">${c.help}</p><div class="labels"><span>組</span><span>${exercise==='fly'?'基本kg':'kg'}</span><span>rep</span><span>アップ</span><span>実施</span></div>${e.sets.map((r,i)=>r.cancelled?`<p class="cancelled">${i+1}：取り消し済み（履歴に保持）</p>`:`<div class="row" data-id="${r.id}"><span class="number">${i+1}</span><select data-field="weight" aria-label="${i+1}セット目の重量">${opts(c.weights,r.weight)}</select><select data-field="reps" aria-label="${i+1}セット目の回数">${opts(Array.from({length:20},(_,n)=>n+1),r.reps)}</select><button class="up" data-action="up" aria-pressed="${r.up}" aria-label="${i+1}セット目アップ">アップ</button><button class="done" data-action="done" aria-pressed="${r.done}" aria-label="${i+1}セット目の実施を確定" ${r.weight===null||r.reps===null?'disabled':''}>${r.done?'済':'✓'}</button>${exercise==='fly'?`<div class="fine"><label>微調整 ＋ <select data-field="fine" aria-label="${i+1}セット目の微調整">${fineWeights.map(x=>`<option value="${x}" ${x===r.fine?'selected':''}>${x}</option>`).join('')}</select> kg</label><output>合計 ${totalWeight(r)??'—'}kg</output></div>`:''}<button class="cancel" data-action="cancel">このセットを取り消す</button></div>`).join('')}<button class="wide" id="add">＋ セットを追加</button><div class="memo"><label for="note">種目メモ</label><textarea id="note" placeholder="例：2セット目、最後の2回きつい。">${esc(e.note)}</textarea></div><p class="save" id="save-status" aria-live="polite">保存済み</p>${active.endedAt?'':'<button class="wide primary" id="finish">トレーニング終了</button>'}<details><summary>修正履歴</summary>${entries.filter(v=>v.snapshot.id===active.id).slice().reverse().map(v=>{const s=v.snapshot,records=s.version===1?{smith:{sets:s.sets,note:s.note}}:s.exercises;return `<details><summary>${esc(date(v.savedAt))} ${esc(v.reason)}</summary>${Object.entries(records).map(([k,x])=>`<p>${catalog[k].name}<br>${x.sets.map(setDescription).join('<br>')}</p><p>メモ：${esc(x.note)}</p>`).join('')}</details>`;}).join('')}</details>`;
+}
+function sessionButton(s,title){return `<button class="history-item" data-open="${s.id}">${title||esc(date(s.startedAt))}<small>${title?esc(date(s.startedAt))+' ／ ':''}${s.parts.join('・')} ／ 実施済み ${count(s)}セット</small></button>`;}
+app.addEventListener('click',e=>{
+ const b=e.target.closest('button');if(!b||failed)return;
+ if(b.dataset.open){active=structuredClone(sessions.find(s=>s.id===b.dataset.open));draw();return;}
+ if(b.id==='home'){active=null;draw();return;}
+ if(b.id==='start'){const parts=[...app.querySelectorAll('.parts input:checked')].map(x=>x.value);if(!parts.length){alert('部位を1つ以上選んでください。');return;}if(save(createSession(parts,sessions),'開始'))draw();return;}
+ if(b.id==='add'){change(s=>{const x=s.exercises[exercise];x.sets.push(newSet(previousSets(sessions,exercise,s.id)[x.sets.length]));},'セット追加');return;}
+ if(b.id==='finish'){if(!confirm('トレーニングを終了しますか？ ✓を付けたセットだけ実績に含めます。'))return;change(s=>s.endedAt=new Date().toISOString(),'終了');return;}
+ const row=b.closest('[data-id]');if(!row)return;const r=active.exercises[exercise].sets.find(r=>r.id===row.dataset.id);
+ if(b.dataset.action==='cancel'&&r.done&&!confirm('実施済みのセットを取り消しますか？ 元の内容は履歴に残ります。'))return;
+ change(s=>{const item=s.exercises[exercise].sets.find(x=>x.id===r.id);if(b.dataset.action==='cancel')item.cancelled=true;else item[b.dataset.action]=!item[b.dataset.action];},b.dataset.action==='cancel'?'セット取り消し':b.dataset.action==='up'?'アップ変更':'実施状態変更');
+});
+app.addEventListener('change',e=>{if(e.target.id==='exercise'){exercise=e.target.value;draw();return;}if(!e.target.dataset.field)return;const id=e.target.closest('[data-id]').dataset.id;change(s=>{const r=s.exercises[exercise].sets.find(r=>r.id===id);r[e.target.dataset.field]=e.target.value===''?null:Number(e.target.value);if(r.weight===null||r.reps===null)r.done=false;},'数値変更');});
+app.addEventListener('input',e=>{if(e.target.id==='note')change(s=>s.exercises[exercise].note=e.target.value,'メモ変更',false);});
+window.addEventListener('storage',e=>{if(e.key===null||e.key?.startsWith(PREFIX))stop(new Error('別のタブで保存領域が変更されました。開き直してください。'));});
+// 入力自体は逐次保存。日本語変換中に画面全体を描き直さない。
+function notify(text){const el=document.querySelector('#backup-status');el.textContent=text;}
+function download(data,name){const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}
+function backup(){download({format:'training-notes-backup',version:1,exportedAt:new Date().toISOString(),entries:readAll(localStorage)},`training-backup-${new Date().toISOString().replace(/[:.]/g,'-')}.json`);}
+ document.querySelector('#backup').onclick=()=>{try{backup();notify('バックアップを書き出しました。保存先を確認してください。');}catch(e){stop(e);}};
+ document.querySelector('#import').onchange=async e=>{const file=e.target.files[0];if(!file||failed)return;try{
+ if(file.size>20000000)throw new Error('ファイルが大きすぎます（上限20MB）。');const data=JSON.parse(await file.text());
+ if(!confirm('バックアップを読み込みます。現在の記録は残し、同じ内容は重複追加しません。よろしいですか？'))return;
+ let result=restore(localStorage,data);if(result.conflicts){if(!confirm(`${result.conflicts}件の記録で現在の内容と食い違いがあります。現在の記録はそのまま残し、バックアップ側を別の記録として追加しますか？`))return;result=restore(localStorage,data,true);}
+ reload();active=null;draw();notify(`${result.added}件の履歴を復元しました。${result.added===0?'追加する記録はありません。':''}`);
+ }catch(err){notify(`復元できませんでした：${err.message} 既存の記録は置き換えていません。`);}finally{e.target.value='';}};
+try{reload();draw();}catch(e){stop(e);}
