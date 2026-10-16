@@ -4,7 +4,7 @@ export const catalog={
  smith:{name:'インクラインスミスベンチプレス',parts:['胸'],weights:range(10,150,2.5),help:'バー分10kg込み（記録用設定）'},
  fly:{name:'マシンペックフライ',parts:['胸'],weights:range(4.5,135,4.5),help:'MATRIX G7-S22 ／ 基本重量＋微調整'},
  bench:{name:'ベンチプレス',parts:['胸'],weights:range(20,150,2.5),help:'バー込みの総重量'},
- dip:{name:'加重ディップス',parts:['胸','三頭筋'],weights:range(0,30,10),help:'追加重量のみ ／ 0kgは自重'},
+ dip:{name:'加重ディップス',parts:['胸','三頭筋'],weights:range(0,60,10),help:'追加重量のみ ／ 0kgは自重'},
  ez:{name:'シーテッドEZバーフレンチプレス',parts:['三頭筋'],weights:range(10,60,2.5),help:'バー分10kg込み（仮設定）'}
 };
 export const weights=catalog.smith.weights;
@@ -19,7 +19,7 @@ export function valid(s){
  if(s.version===1)return typeof s.note==='string'&&validSets(s.sets,'smith',true);
  if(s.version!==2||!Array.isArray(s.parts)||!s.parts.length||new Set(s.parts).size!==s.parts.length||!s.parts.every(x=>['胸','三頭筋'].includes(x))||!s.exercises||typeof s.exercises!=='object')return false;
  const keys=Object.keys(s.exercises),expected=Object.keys(catalog).filter(k=>catalog[k].parts.some(p=>s.parts.includes(p)));
- return keys.length===expected.length&&keys.every(k=>expected.includes(k)&&typeof s.exercises[k]?.note==='string'&&validSets(s.exercises[k].sets,k));
+ return keys.length===expected.length&&keys.every(k=>expected.includes(k)&&typeof s.exercises[k]?.note==='string'&&(s.exercises[k].feedback===undefined||typeof s.exercises[k].feedback==='string')&&validSets(s.exercises[k].sets,k));
 }
 function validSets(rows,k,legacy=false){return Array.isArray(rows)&&rows.length>0&&new Set(rows.map(r=>r?.id)).size===rows.length&&rows.every(r=>r&&typeof r.id==='string'&&(r.weight===null||catalog[k].weights.includes(r.weight))&&(r.reps===null||Number.isInteger(r.reps)&&r.reps>=1&&r.reps<=20)&&typeof r.up==='boolean'&&typeof r.done==='boolean'&&typeof r.cancelled==='boolean'&&(legacy||fineWeights.includes(r.fine)&& (k==='fly'||r.fine===0))&&(!r.done||r.weight!==null&&r.reps!==null));}
 export function newSet(previous){return {id:uuid(),weight:previous?.weight??null,reps:previous?.reps??null,fine:previous?.fine??0,up:false,done:false,cancelled:false};}
