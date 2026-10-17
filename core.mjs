@@ -15,9 +15,9 @@ export const catalog={
  sideRaise:{name:'シーテッド・サイドレイズ',parts:['肩'],weights:dumbbells,help:'ダンベル片手の重量'},
  ezCurl:{name:'スタンディング・EZバーカール',parts:['二頭筋'],weights:range(10,70,2.5),help:'バー分10kg込み（仮設定）'},
  hammerCurl:{name:'シーテッド・ハンマーカール',parts:['二頭筋'],weights:dumbbells,help:'ダンベル片手の重量'},
- pullUp:{name:'懸垂',parts:['背中'],weights:range(0,30,10),addedWeight:true,help:'追加重量のみ ／ 0kgは自重'},
+ pullUp:{name:'懸垂',parts:['背中'],weights:range(0,30,10),addedWeight:true,grips:{standard:'スタンダード',narrow:'ナロー',back:'バック（反対側に体を向ける）'},defaultGrip:'standard',help:'追加重量のみ ／ 0kgは自重'},
  tBarRow:{name:'Tバーロー',parts:['背中'],weights:range(0,100,2.5),help:'SPIRIT SP-4231 ／ プレート重量のみ'},
- latPulldown:{name:'ラットプルダウン',parts:['背中'],weights:[...range(1,104,1),104.3],decimals:1,grips:latGrips,help:'MATRIX VS-S331 ／ 表示重量を記録。重量の選択肢は仮設定（写真確認待ち）'},
+ latPulldown:{name:'ラットプルダウン',parts:['背中'],weights:[...range(1,104,1),104.3],decimals:1,grips:latGrips,defaultGrip:'bar',help:'MATRIX VS-S331 ／ 表示重量を記録。重量の選択肢は仮設定（写真確認待ち）'},
  bentRow:{name:'ベントオーバーロー',parts:['背中'],weights:range(20,100,2.5),help:'ストレートバー込みの総重量（バー20kg仮設定）'},
  cableRow:{name:'シーテッドケーブルロー',parts:['背中'],weights:[...range(1,104,1),104.3],decimals:1,help:'MATRIX VS-S331 ／ 付属グリップ。重量の選択肢は仮設定（写真確認待ち）'},
  cablePullover:{name:'ケーブルプルオーバー',parts:['背中'],weights:range(1,40,1),decimals:1,help:'MATRIX VS-VFT ／ バーグリップ・両手。表示重量を記録、1kg刻みは仮設定（写真確認待ち）'},
@@ -37,11 +37,11 @@ export function valid(s){
  const keys=Object.keys(s.exercises),expected=Object.keys(catalog).filter(k=>catalog[k].parts.some(p=>s.parts.includes(p)));
  return keys.length===expected.length&&keys.every(k=>expected.includes(k)&&typeof s.exercises[k]?.note==='string'&&(s.exercises[k].feedback===undefined||typeof s.exercises[k].feedback==='string')&&validSets(s.exercises[k].sets,k));
 }
-function validSets(rows,k,legacy=false){return Array.isArray(rows)&&rows.length>0&&new Set(rows.map(r=>r?.id)).size===rows.length&&rows.every(r=>r&&typeof r.id==='string'&&(r.weight===null||catalog[k].weights.includes(r.weight))&&(r.reps===null||Number.isInteger(r.reps)&&r.reps>=1&&r.reps<=20)&&(r.grip===undefined||k==='latPulldown'&&Object.hasOwn(latGrips,r.grip))&&typeof r.up==='boolean'&&typeof r.done==='boolean'&&typeof r.cancelled==='boolean'&&(legacy||fineWeights.includes(r.fine)&& (['fly','rearDelt'].includes(k)||r.fine===0))&&(!r.done||r.weight!==null&&r.reps!==null));}
+function validSets(rows,k,legacy=false){return Array.isArray(rows)&&rows.length>0&&new Set(rows.map(r=>r?.id)).size===rows.length&&rows.every(r=>r&&typeof r.id==='string'&&(r.weight===null||catalog[k].weights.includes(r.weight))&&(r.reps===null||Number.isInteger(r.reps)&&r.reps>=1&&r.reps<=20)&&(r.grip===undefined||catalog[k].grips&&Object.hasOwn(catalog[k].grips,r.grip))&&typeof r.up==='boolean'&&typeof r.done==='boolean'&&typeof r.cancelled==='boolean'&&(legacy||fineWeights.includes(r.fine)&& (['fly','rearDelt'].includes(k)||r.fine===0))&&(!r.done||r.weight!==null&&r.reps!==null));}
 export function newSet(previous){return {id:uuid(),weight:previous?.weight??null,reps:previous?.reps??null,fine:previous?.fine??0,...(previous?.grip?{grip:previous.grip}:{}),up:false,done:false,cancelled:false};}
 export function previousSets(sessions,key,exclude){const s=sessions.filter(s=>s.id!==exclude&&s.endedAt&&s.exercises[key]&&performed(s.exercises[key]).length).sort((a,b)=>b.endedAt.localeCompare(a.endedAt))[0];return s?performed(s.exercises[key]):[];}
 export function createSession(parts=['胸'],sessions=[]){
- const exercises={};for(const [k,c]of Object.entries(catalog))if(c.parts.some(p=>parts.includes(p))){const row=newSet(previousSets(sessions,k)[0]);if(c.grips)row.grip??='bar';exercises[k]={note:'',sets:[row]};}
+ const exercises={};for(const [k,c]of Object.entries(catalog))if(c.parts.some(p=>parts.includes(p))){const row=newSet(previousSets(sessions,k)[0]);if(c.grips)row.grip??=c.defaultGrip;exercises[k]={note:'',sets:[row]};}
  return {version:2,id:uuid(),revision:0,startedAt:new Date().toISOString(),endedAt:null,parts:[...parts],exercises};
 }
 export function readAll(storage){const out=[];for(let i=0;i<storage.length;i++){const k=storage.key(i);if(!k?.startsWith(PREFIX))continue;const raw=JSON.parse(storage.getItem(k));const batch=raw.batch??[raw];if(!Array.isArray(batch))throw new Error('保存データが不正です。');for(const e of batch){if(!valid(e.snapshot)||!iso(e.savedAt)||typeof e.reason!=='string')throw new Error('保存データを読み取れません。上書きせず停止しました。');out.push(e);}}return out;}
