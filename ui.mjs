@@ -1,5 +1,5 @@
 import {SHORTCUT_NAME,SETTINGS_KEY,enqueue,pending,shortcutURL} from './delivery.mjs';
-import {PREFIX,catalog,bodyParts,fineWeights,newSet,createSession,readAll,latest,append,previousSets,performed,totalWeight,restore} from './core.mjs';
+import {PREFIX,catalog,bodyParts,fineWeights,newSet,createSession,readAll,latest,append,previousSets,performed,totalWeight,restore,setSessionDeleted} from './core.mjs';
 const app=document.querySelector('#app'),error=document.querySelector('#error');
 let entries=[],sessions=[],active=null,exercise='smith',failed=false,choosingParts=false;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -13,15 +13,41 @@ function opts(values,value,plus=false,decimals){return '<option value="">—</op
 function setDescription(r,i,key){return `${i+1}：${totalWeight(r)??'未選択'}kg × ${r.reps??'未選択'}回 ${r.up?'アップ':''} ${r.cancelled?'取り消し':r.done?'実施済み':'未実施'}${r.grip?' ／ '+esc(catalog[key]?.grips?.[r.grip]??r.grip):''}`;}
 function draw(){
  if(!active&&choosingParts){app.innerHTML=`<button id="cancel-start">‹ 戻る</button><h2>今日鍛える部位</h2><div class="parts">${bodyParts.map(p=>`<label><input type="checkbox" value="${p}" ${p==='胸'?'checked':''}>${p}</label>`).join('')}</div><button class="wide primary" id="confirm-start">この部位で始める</button>`;return;}
- if(!active){app.innerHTML=`<button class="wide primary" id="start">開始する</button>${sessions.some(s=>!s.endedAt)?'<h2>途中の記録</h2>':''}${sessions.filter(s=>!s.endedAt).map(s=>sessionButton(s,'続きを記録する')).join('')}<h2>過去の記録</h2>${sessions.filter(s=>s.endedAt).map(s=>sessionButton(s)).join('')||'<p class="sub">終了した記録はまだありません</p>'}`;return;}
+ if(!active){const visible=sessions.filter(s=>!s.deletedAt),deleted=sessions.filter(s=>s.deletedAt);app.innerHTML=`<button class="wide primary" id="start">開始する</button>${visible.some(s=>!s.endedAt)?'<h2>途中の記録</h2><p class="sub">長押しで削除できます（あとで元に戻せます）</p>':''}${visible.filter(s=>!s.endedAt).map(s=>sessionButton(s,'続きを記録する')).join('')}<h2>過去の記録</h2>${visible.filter(s=>s.endedAt).map(s=>sessionButton(s)).join('')||'<p class="sub">終了した記録はまだありません</p>'}${deleted.length?`<details id="deleted-records"><summary>削除した記録（${deleted.length}件）</summary><p class="sub">元のデータは残っています。戻すと続きを記録できます。</p>${deleted.map(s=>`<div class="deleted-item"><p>${esc(date(s.startedAt))}<br>${s.parts.join('・')} ／ 実施済み ${count(s)}セット</p><button data-restore-session="${s.id}">元に戻す</button></div>`).join('')}</details>`:''}`;return;}
  if(!active.exercises[exercise])exercise=Object.keys(active.exercises)[0];
  const e=active.exercises[exercise],c=catalog[exercise];
  app.innerHTML=`<button id="home">‹ 記録一覧へ</button><p class="sub">${esc(date(active.startedAt))} ／ ${active.endedAt?'終了済み・修正可能':'記録中'}<br>${active.parts.join('・')} ／ 実施済み ${count(active)}セット</p><label for="exercise">種目</label><select id="exercise">${Object.keys(active.exercises).map(k=>`<option value="${k}" ${k===exercise?'selected':''}>${catalog[k].name}</option>`).join('')}</select><p class="sub">${c.help}</p><div class="labels"><span>組</span><span>${['fly','rearDelt'].includes(exercise)?'基本kg':'kg'}</span><span>rep</span><span>アップ</span><span>実施</span></div>${e.sets.map((r,i)=>r.cancelled?`<p class="cancelled">${i+1}：取り消し済み（履歴に保持）</p>`:`<div class="row" data-id="${r.id}"><span class="number">${i+1}</span><select data-field="weight" aria-label="${i+1}セット目の重量">${opts(c.weights,r.weight,exercise==='dip'||c.addedWeight,c.decimals)}</select><select data-field="reps" aria-label="${i+1}セット目の回数">${opts(Array.from({length:20},(_,n)=>n+1),r.reps)}</select><button class="up" data-action="up" aria-pressed="${r.up}" aria-label="${i+1}セット目アップ">アップ</button><button class="done" data-action="done" aria-pressed="${r.done}" aria-label="${i+1}セット目の実施を確定" ${r.weight===null||r.reps===null?'disabled':''}>${r.done?'済':'✓'}</button>${c.grips?`<div class="grip-row"><label>グリップ<select data-field="grip" aria-label="${i+1}セット目のグリップ">${r.grip===undefined&&exercise==='pullUp'?'<option value="" selected>未選択（過去の記録）</option>':''}${Object.entries(c.grips).map(([key,name])=>`<option value="${key}" ${key===(r.grip??(exercise==='pullUp'?'':c.defaultGrip))?'selected':''}>${name}</option>`).join('')}</select></label></div>`:''}${['fly','rearDelt'].includes(exercise)?`<div class="fine"><label>微調整 ＋ <select data-field="fine" aria-label="${i+1}セット目の微調整">${fineWeights.map(x=>`<option value="${x}" ${x===r.fine?'selected':''}>${x}</option>`).join('')}</select> kg</label><output>合計 ${totalWeight(r)??'—'}kg</output></div>`:''}<button class="cancel" data-action="cancel">このセットを取り消す</button></div>`).join('')}<button class="wide" id="add">＋ セットを追加</button><div class="memo"><label for="note">種目メモ</label><textarea id="note" placeholder="例：2セット目、最後の2回きつい。">${esc(e.note)}</textarea></div><details class="feedback-box"><summary>ツールの修正要望</summary><label for="feedback">使いにくいところ・直してほしいところ</label><textarea id="feedback" placeholder="例：重量の選択をもっと簡単にしたい">${esc(e.feedback??'')}</textarea></details><p class="save" id="save-status" aria-live="polite">保存済み</p>${active.endedAt?'<button class="wide" id="resend">この記録をiCloudへ渡す</button>':'<button class="wide primary" id="next">次の種目を選ぶ</button><button class="wide" id="finish">今日のトレーニングを終了</button>'}<details><summary>修正履歴</summary>${entries.filter(v=>v.snapshot.id===active.id).slice().reverse().map(v=>{const s=v.snapshot,records=s.version===1?{smith:{sets:s.sets,note:s.note}}:s.exercises;return `<details><summary>${esc(date(v.savedAt))} ${esc(v.reason)}</summary>${Object.entries(records).map(([k,x])=>`<p>${catalog[k].name}<br>${x.sets.map((r,i)=>setDescription(r,i,k)).join('<br>')}</p><p>メモ：${esc(x.note)}</p><p>修正要望：${esc(x.feedback??'')}</p>`).join('')}</details>`;}).join('')}</details>`;
 }
-function sessionButton(s,title){return `<button class="history-item" data-open="${s.id}">${title||esc(date(s.startedAt))}<small>${title?esc(date(s.startedAt))+' ／ ':''}${s.parts.join('・')} ／ 実施済み ${count(s)}セット</small></button>`;}
+function sessionButton(s,title){return `<button class="history-item" data-open="${s.id}" ${!s.endedAt?'data-resumable="true"':''}>${title||esc(date(s.startedAt))}<small>${title?esc(date(s.startedAt))+' ／ ':''}${s.parts.join('・')} ／ 実施済み ${count(s)}セット</small></button>`;}
+const deleteDialog=document.querySelector('#delete-session-dialog');
+let pendingDeleteId=null,press=null,suppressedId=null;
+function cancelPress(){if(press)clearTimeout(press.timer);press=null;}
+function requestSessionDelete(id){
+ const session=sessions.find(s=>s.id===id);if(failed||active||!session||session.endedAt||session.deletedAt)return;
+ suppressedId=id;
+ pendingDeleteId=id;document.querySelector('#delete-session-info').textContent=`${date(session.startedAt)} ／ ${session.parts.join('・')} ／ 実施済み ${count(session)}セット`;
+ deleteDialog.showModal();
+}
+app.addEventListener('pointerdown',e=>{
+ const button=e.target.closest('button[data-resumable]');if(!button||failed||e.button!==0)return;
+ suppressedId=null;cancelPress();press={x:e.clientX,y:e.clientY,pointerId:e.pointerId,timer:setTimeout(()=>{const id=button.dataset.open;cancelPress();requestSessionDelete(id);},650)};
+});
+app.addEventListener('pointermove',e=>{if(press&&e.pointerId===press.pointerId&&Math.hypot(e.clientX-press.x,e.clientY-press.y)>10)cancelPress();});
+for(const type of ['pointerup','pointercancel','pointerleave'])app.addEventListener(type,cancelPress);
+window.addEventListener('blur',cancelPress);window.addEventListener('scroll',cancelPress,true);
+app.addEventListener('click',e=>{const button=e.target.closest('[data-resumable]');if(button&&button.dataset.open===suppressedId){e.preventDefault();e.stopImmediatePropagation();suppressedId=null;}},true);
+app.addEventListener('contextmenu',e=>{const button=e.target.closest('[data-resumable]');if(button){e.preventDefault();cancelPress();if(!deleteDialog.open)requestSessionDelete(button.dataset.open);}});
+app.addEventListener('keydown',e=>{const button=e.target.closest('[data-resumable]');if(button&&e.key==='Delete'){e.preventDefault();requestSessionDelete(button.dataset.open);}});
+document.querySelector('#cancel-session-delete').onclick=()=>deleteDialog.close();
+deleteDialog.addEventListener('close',()=>{pendingDeleteId=null;suppressedId=null;});
+document.querySelector('#confirm-session-delete').onclick=()=>{
+ const session=sessions.find(s=>s.id===pendingDeleteId);deleteDialog.close();if(!session||failed)return;
+ try{if(save(setSessionDeleted(session,true),'記録を削除（復元可能）')){active=null;draw();notify('一覧から削除しました。「削除した記録」から元に戻せます。');}}catch(e){stop(e);}
+};
 app.addEventListener('click',e=>{
  const b=e.target.closest('button');if(!b||failed)return;
- if(b.dataset.open){active=structuredClone(sessions.find(s=>s.id===b.dataset.open));draw();return;}
+ if(b.dataset.restoreSession){const session=sessions.find(s=>s.id===b.dataset.restoreSession);if(session?.deletedAt&&save(setSessionDeleted(session,false),'記録を元に戻す')){active=null;draw();notify('記録を元に戻しました。続きを記録できます。');}return;}
+ if(b.dataset.open){active=structuredClone(sessions.find(s=>s.id===b.dataset.open&&!s.deletedAt));draw();return;}
  if(b.id==='home'){active=null;draw();return;}
  if(b.id==='start'){choosingParts=true;draw();return;}
  if(b.id==='cancel-start'){choosingParts=false;draw();return;}

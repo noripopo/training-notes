@@ -31,6 +31,7 @@ export const totalWeight=r=>r.weight===null?null:Math.round((r.weight+(r.fine??0
 export const performed=e=>e.sets.filter(r=>r.done&&!r.cancelled);
 export function normalize(s){if(s.version===2)return structuredClone(s);const exercises={smith:{note:s.note,sets:s.sets.map(r=>({...r,fine:0}))}};for(const k of ['fly','bench','dip'])exercises[k]={note:'',sets:[{id:`${s.id}:${k}:initial`,weight:null,reps:null,fine:0,up:false,done:false,cancelled:false}]};return {version:2,id:s.id,revision:s.revision,startedAt:s.startedAt,endedAt:s.endedAt,parts:['胸'],exercises};}
 export function valid(s){
+ if(s?.deletedAt!==undefined&&s.deletedAt!==null&&!iso(s.deletedAt))return false;
  if(!s||typeof s.id!=='string'||!s.id||!Number.isInteger(s.revision)||s.revision<0||!iso(s.startedAt)||!(s.endedAt===null||iso(s.endedAt)))return false;
  if(s.version===1)return typeof s.note==='string'&&validSets(s.sets,'smith',true);
  if(s.version!==2||!Array.isArray(s.parts)||!s.parts.length||new Set(s.parts).size!==s.parts.length||!s.parts.every(x=>bodyParts.includes(x))||!s.exercises||typeof s.exercises!=='object')return false;
@@ -39,7 +40,11 @@ export function valid(s){
 }
 function validSets(rows,k,legacy=false){return Array.isArray(rows)&&rows.length>0&&new Set(rows.map(r=>r?.id)).size===rows.length&&rows.every(r=>r&&typeof r.id==='string'&&(r.weight===null||catalog[k].weights.includes(r.weight))&&(r.reps===null||Number.isInteger(r.reps)&&r.reps>=1&&r.reps<=20)&&(r.grip===undefined||catalog[k].grips&&Object.hasOwn(catalog[k].grips,r.grip))&&typeof r.up==='boolean'&&typeof r.done==='boolean'&&typeof r.cancelled==='boolean'&&(legacy||fineWeights.includes(r.fine)&& (['fly','rearDelt'].includes(k)||r.fine===0))&&(!r.done||r.weight!==null&&r.reps!==null));}
 export function newSet(previous){return {id:uuid(),weight:previous?.weight??null,reps:previous?.reps??null,fine:previous?.fine??0,...(previous?.grip?{grip:previous.grip}:{}),up:false,done:false,cancelled:false};}
-export function previousSets(sessions,key,exclude){const s=sessions.filter(s=>s.id!==exclude&&s.endedAt&&s.exercises[key]&&performed(s.exercises[key]).length).sort((a,b)=>b.endedAt.localeCompare(a.endedAt))[0];return s?performed(s.exercises[key]):[];}
+export function previousSets(sessions,key,exclude){const s=sessions.filter(s=>!s.deletedAt&&s.id!==exclude&&s.endedAt&&s.exercises[key]&&performed(s.exercises[key]).length).sort((a,b)=>b.endedAt.localeCompare(a.endedAt))[0];return s?performed(s.exercises[key]):[];}
+export function setSessionDeleted(session,deleted){
+ if(!valid(session)||deleted&&session.endedAt)throw new Error('途中の記録だけ削除できます。');
+ const next=normalize(session);next.revision++;next.deletedAt=deleted?new Date().toISOString():null;return next;
+}
 export function createSession(parts=['胸'],sessions=[]){
  const exercises={};for(const [k,c]of Object.entries(catalog))if(c.parts.some(p=>parts.includes(p))){const row=newSet(previousSets(sessions,k)[0]);if(c.grips)row.grip??=c.defaultGrip;exercises[k]={note:'',sets:[row]};}
  return {version:2,id:uuid(),revision:0,startedAt:new Date().toISOString(),endedAt:null,parts:[...parts],exercises};
