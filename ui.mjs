@@ -1,4 +1,4 @@
-import {dateKey,sessionNames,exerciseKeys,historyGroups,recentDays} from './history.mjs';
+import {dateKey,sessionNames,exerciseKeys,historyGroups,recentDays,calendarParts} from './history.mjs';
 import {SHORTCUT_NAME,SETTINGS_KEY,enqueue,pending,shortcutURL} from './delivery.mjs';
 import {PREFIX,catalog,bodyParts,fineWeights,newSet,createSession,readAll,latest,append,previousSets,performed,totalWeight,restore,setSessionDeleted} from './core.mjs';
 const app=document.querySelector('#app'),error=document.querySelector('#error');
@@ -25,9 +25,9 @@ function historyView(g){
 }
 function calendarView(){
  const days=recentDays(),groups=historyGroups(sessions,entries),recent=groups.filter(g=>days.includes(g.date)&&g.count>0),trainingDays=new Set(recent.map(g=>g.date));
- const drafts=sessions.filter(s=>!s.endedAt&&!s.deletedAt),selectedGroups=groups.filter(g=>g.date===selectedDate),selectedDrafts=drafts.filter(s=>dateKey(s.startedAt)===selectedDate);
+ const selectedGroups=groups.filter(g=>g.date===selectedDate&&g.count>0);
  const offset=(new Date(days[0]+'T12:00:00+09:00').getUTCDay()+6)%7;
- return `<details id="recent-calendar" ${calendarOpen?'open':''}><summary>直近2週間のカレンダー</summary><p class="sub">${days[0].replaceAll('-','/')}〜${days.at(-1).replaceAll('-','/')}<br>トレーニング ${trainingDays.size}日・${recent.length}回</p><div class="calendar-grid">${['月','火','水','木','金','土','日'].map(d=>`<span class="weekday">${d}</span>`).join('')}${'<span></span>'.repeat(offset)}${days.map(day=>{const done=groups.some(g=>g.date===day&&g.count>0),draft=drafts.some(s=>dateKey(s.startedAt)===day);return `<button data-calendar-date="${day}" aria-label="${day} ${done?'トレーニングあり ':''}${draft?'途中の記録あり':''}" aria-pressed="${selectedDate===day}"><span>${Number(day.slice(-2))}</span><small>${done?'●':''}${draft?'△':''}</small></button>`;}).join('')}</div><p class="sub">● 実施済みのトレーニング　△ 途中の記録</p><h3>${selectedDate.replaceAll('-','/')}</h3>${selectedGroups.map(groupButton).join('')}${selectedDrafts.map(s=>sessionButton(s,'続きを記録する')).join('')}${!selectedGroups.length&&!selectedDrafts.length?'<p class="sub">この日の記録はありません。</p>':''}</details>`;
+ return `<details id="recent-calendar" ${calendarOpen?'open':''}><summary>直近2週間のカレンダー</summary><p class="sub">${days[0].replaceAll('-','/')}〜${days.at(-1).replaceAll('-','/')}<br>トレーニング ${trainingDays.size}日・${recent.length}回</p><div class="calendar-grid">${['月','火','水','木','金','土','日'].map(d=>`<span class="weekday">${d}</span>`).join('')}${'<span></span>'.repeat(offset)}${days.map(day=>{const parts=calendarParts(groups,day);return `<button data-calendar-date="${day}" aria-label="${day}${parts.length?' '+parts.join('・'):''}" aria-pressed="${selectedDate===day}"><span>${Number(day.slice(-2))}</span>${parts.map(part=>`<small>${esc(part)}</small>`).join('')}</button>`;}).join('')}</div><h3>${selectedDate.replaceAll('-','/')}</h3>${selectedGroups.map(groupButton).join('')}${!selectedGroups.length?'<p class="sub">この日の記録はありません。</p>':''}</details>`;
 }
 app.addEventListener('toggle',e=>{if(e.target.id==='recent-calendar')calendarOpen=e.target.open;},true);
 function draw(){

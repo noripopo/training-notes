@@ -13,3 +13,5 @@ export function historyGroups(sessions,entries=[]){
 export function recentDays(now=new Date()){
  const today=dateKey(now),base=Date.parse(today+'T12:00:00+09:00');return Array.from({length:14},(_,i)=>dateKey(base-(13-i)*86400000));
 }
+
+export function calendarParts(groups,day){return [...new Set(groups.filter(g=>g.date===day&&g.count>0).flatMap(g=>g.keys.flatMap(key=>catalog[key].parts)))];}
