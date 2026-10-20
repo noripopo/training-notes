@@ -3,6 +3,8 @@ const range=(a,b,d)=>Array.from({length:Math.round((b-a)/d)+1},(_,i)=>Math.round
 export const bodyParts=['胸','三頭筋','肩','二頭筋','背中'];
 const dumbbells=[...range(1,10,1),...range(12,40,2)];
 export const latGrips={bar:'付属バー',wide:'MAG・ワイド',medium:'MAG・ミディアム（回内）',close:'MAG・クローズ（回内）'};
+const stackWeights=[4,9,14,18,23,29,36,43,50,57,63,70,77,84,90,97,104];
+const pulleyWeights=[2.3,4.5,6.8,9.1,11.3,13.6,15.9,18.1,20.4,22.7,24.9,27.2,29.5,31.8,34,36.3,38.6,40.8,43.1,45.4,47.6];
 export const catalog={
  smith:{name:'インクラインスミスベンチプレス',parts:['胸'],weights:range(10,150,2.5),help:'バー分10kg込み（記録用設定）'},
  fly:{name:'マシンペックフライ',parts:['胸'],weights:range(4.5,135,4.5),help:'MATRIX G7-S22 ／ 基本重量＋微調整'},
@@ -16,11 +18,11 @@ export const catalog={
  ezCurl:{name:'スタンディング・EZバーカール',parts:['二頭筋'],weights:range(10,70,2.5),help:'バー分10kg込み（仮設定）'},
  hammerCurl:{name:'シーテッド・ハンマーカール',parts:['二頭筋'],weights:dumbbells,help:'ダンベル片手の重量'},
  pullUp:{name:'懸垂',parts:['背中'],weights:range(0,30,10),addedWeight:true,grips:{standard:'スタンダード',narrow:'ナロー',back:'バック（反対側に体を向ける）'},defaultGrip:'standard',help:'追加重量のみ ／ 0kgは自重'},
- tBarRow:{name:'Tバーロー',parts:['背中'],weights:range(0,100,2.5),help:'SPIRIT SP-4231 ／ プレート重量のみ'},
- latPulldown:{name:'ラットプルダウン',parts:['背中'],weights:[...range(1,104,1),104.3],decimals:1,grips:latGrips,defaultGrip:'bar',help:'MATRIX VS-S331 ／ 表示重量を記録。重量の選択肢は仮設定（写真確認待ち）'},
+ tBarRow:{name:'Tバーロー',parts:['背中'],weights:range(10,110,2.5),legacyWeights:range(0,100,2.5),grips:{standard:'スタンダード',narrow:'ナロー',wide:'ワイド'},defaultGrip:'standard',help:'SPIRIT SP-4231 ／ バー10kg込みの総重量'},
+ latPulldown:{name:'ラットプルダウン',parts:['背中'],weights:stackWeights,legacyWeights:[...range(1,104,1),104.3],fineWeights:[0,2],decimals:1,grips:latGrips,defaultGrip:'bar',help:'MATRIX VS-S331 ／ 写真の表示重量＋追加2kgを記録'},
  bentRow:{name:'ベントオーバーロー',parts:['背中'],weights:range(20,100,2.5),help:'ストレートバー込みの総重量（バー20kg仮設定）'},
- cableRow:{name:'シーテッドケーブルロー',parts:['背中'],weights:[...range(1,104,1),104.3],decimals:1,help:'MATRIX VS-S331 ／ 付属グリップ。重量の選択肢は仮設定（写真確認待ち）'},
- cablePullover:{name:'ケーブルプルオーバー',parts:['背中'],weights:range(1,40,1),decimals:1,help:'MATRIX VS-VFT ／ バーグリップ・両手。表示重量を記録、1kg刻みは仮設定（写真確認待ち）'},
+ cableRow:{name:'シーテッドケーブルロー',parts:['背中'],weights:stackWeights,legacyWeights:[...range(1,104,1),104.3],fineWeights:[0,2],decimals:1,help:'MATRIX VS-S331 ／ 付属グリップ ／ 写真の表示重量＋追加2kgを記録'},
+ cablePullover:{name:'ケーブルプルオーバー',parts:['背中'],weights:pulleyWeights,legacyWeights:range(1,40,1),decimals:1,help:'MATRIX VS-VFT ／ バーグリップ・両手。写真の表示重量を記録'},
  dumbbellRow:{name:'ダンベルロー',parts:['背中'],weights:dumbbells,help:'ダンベル片手の重量'}
 };
 export const weights=catalog.smith.weights;
@@ -38,15 +40,17 @@ export function valid(s){
  const keys=Object.keys(s.exercises),expected=Object.keys(catalog).filter(k=>catalog[k].parts.some(p=>s.parts.includes(p)));
  return keys.length===expected.length&&keys.every(k=>expected.includes(k)&&typeof s.exercises[k]?.note==='string'&&(s.exercises[k].feedback===undefined||typeof s.exercises[k].feedback==='string')&&validSets(s.exercises[k].sets,k));
 }
-function validSets(rows,k,legacy=false){return Array.isArray(rows)&&rows.length>0&&new Set(rows.map(r=>r?.id)).size===rows.length&&rows.every(r=>r&&typeof r.id==='string'&&(r.weight===null||catalog[k].weights.includes(r.weight))&&(r.reps===null||Number.isInteger(r.reps)&&r.reps>=1&&r.reps<=20)&&(r.grip===undefined||catalog[k].grips&&Object.hasOwn(catalog[k].grips,r.grip))&&typeof r.up==='boolean'&&typeof r.done==='boolean'&&typeof r.cancelled==='boolean'&&(legacy||fineWeights.includes(r.fine)&& (['fly','rearDelt'].includes(k)||r.fine===0))&&(!r.done||r.weight!==null&&r.reps!==null));}
-export function newSet(previous){return {id:uuid(),weight:previous?.weight??null,reps:previous?.reps??null,fine:previous?.fine??0,...(previous?.grip?{grip:previous.grip}:{}),up:false,done:false,cancelled:false};}
+export const rowReady=(r,k)=>r.weight!==null&&r.reps!==null&&(r.reps>0||k==='pullUp'&&(r.negativeReps??0)>0);
+export const fineOptions=k=>catalog[k].fineWeights??(['fly','rearDelt'].includes(k)?fineWeights:[0]);
+function validSets(rows,k,legacy=false){return Array.isArray(rows)&&rows.length>0&&new Set(rows.map(r=>r?.id)).size===rows.length&&rows.every(r=>r&&typeof r.id==='string'&&(r.weight===null||catalog[k].weights.includes(r.weight)||catalog[k].legacyWeights?.includes(r.weight))&&(r.reps===null||Number.isInteger(r.reps)&&r.reps>=(k==='pullUp'?0:1)&&r.reps<=20)&&(r.negativeReps===undefined||k==='pullUp'&&Number.isInteger(r.negativeReps)&&r.negativeReps>=0&&r.negativeReps<=10)&&(r.weightBasis===undefined||k==='tBarRow'&&r.weightBasis==='bar10Included')&&(r.grip===undefined||catalog[k].grips&&Object.hasOwn(catalog[k].grips,r.grip))&&typeof r.up==='boolean'&&typeof r.done==='boolean'&&typeof r.cancelled==='boolean'&&(legacy||fineOptions(k).includes(r.fine))&&(!r.done||rowReady(r,k)));}
+export function newSet(previous){return {id:uuid(),weight:previous?.weight??null,reps:previous?.reps??null,fine:previous?.fine??0,...(previous?.grip?{grip:previous.grip}:{}),...(previous?.weightBasis?{weightBasis:previous.weightBasis}:{}),up:false,done:false,cancelled:false};}
 export function previousSets(sessions,key,exclude){const s=sessions.filter(s=>!s.deletedAt&&s.id!==exclude&&s.endedAt&&s.exercises[key]&&performed(s.exercises[key]).length).sort((a,b)=>b.endedAt.localeCompare(a.endedAt))[0];return s?performed(s.exercises[key]):[];}
 export function setSessionDeleted(session,deleted){
  if(!valid(session)||deleted&&session.endedAt)throw new Error('途中の記録だけ削除できます。');
  const next=normalize(session);next.revision++;next.deletedAt=deleted?new Date().toISOString():null;return next;
 }
 export function createSession(parts=['胸'],sessions=[]){
- const exercises={};for(const [k,c]of Object.entries(catalog))if(c.parts.some(p=>parts.includes(p))){const row=newSet(previousSets(sessions,k)[0]);if(c.grips)row.grip??=c.defaultGrip;exercises[k]={note:'',sets:[row]};}
+ const exercises={};for(const [k,c]of Object.entries(catalog))if(c.parts.some(p=>parts.includes(p))){const row=newSet(previousSets(sessions,k)[0]);if(c.grips)row.grip??=c.defaultGrip;if(k==='pullUp')row.negativeReps=0;if(k==='tBarRow'){if(previousSets(sessions,k)[0]&&!row.weightBasis)row.weight=null;row.weightBasis='bar10Included';}exercises[k]={note:'',sets:[row]};}
  return {version:2,id:uuid(),revision:0,startedAt:new Date().toISOString(),endedAt:null,parts:[...parts],exercises};
 }
 export function readAll(storage){const out=[];for(let i=0;i<storage.length;i++){const k=storage.key(i);if(!k?.startsWith(PREFIX))continue;const raw=JSON.parse(storage.getItem(k));const batch=raw.batch??[raw];if(!Array.isArray(batch))throw new Error('保存データが不正です。');for(const e of batch){if(!valid(e.snapshot)||!iso(e.savedAt)||typeof e.reason!=='string')throw new Error('保存データを読み取れません。上書きせず停止しました。');out.push(e);}}return out;}
