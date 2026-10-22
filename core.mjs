@@ -12,6 +12,8 @@ export const catalog={
  dip:{name:'加重ディップス',parts:['胸','三頭筋'],weights:range(0,60,10),help:'追加重量のみ ／ 0kgは自重'},
  ez:{name:'シーテッドEZバーフレンチプレス',parts:['三頭筋'],weights:range(10,60,2.5),help:'バー分10kg込み（仮設定）'},
  shoulderPress:{name:'ダンベルショルダープレス',parts:['肩'],weights:dumbbells,help:'ダンベル片手の重量'},
+ smithBackShoulderPress:{name:'スミスマシンバックショルダープレス',parts:['肩'],optionalForLegacy:true,weights:range(10,80,2.5),help:'バー分10kg込み ／ 上限80kg（仮設定）'},
+ militaryPress:{name:'ミリタリープレス',parts:['肩'],optionalForLegacy:true,weights:range(20,80,2.5),help:'通常のバーベル ／ バー20kg込み・上限80kg（仮設定）'},
  uprightRow:{name:'アップライトロー',parts:['肩'],weights:range(20,80,2.5),help:'ストレートバー込みの総重量（バー20kg仮設定）'},
  rearDelt:{name:'マシンリアデルト',parts:['肩'],weights:range(4.5,135,4.5),help:'MATRIX G7-S22 ／ 基本重量＋微調整'},
  sideRaise:{name:'シーテッド・サイドレイズ',parts:['肩'],weights:dumbbells,help:'ダンベル片手の重量'},
@@ -38,7 +40,7 @@ export function valid(s){
  if(s.version===1)return typeof s.note==='string'&&validSets(s.sets,'smith',true);
  if(s.version!==2||!Array.isArray(s.parts)||!s.parts.length||new Set(s.parts).size!==s.parts.length||!s.parts.every(x=>bodyParts.includes(x))||!s.exercises||typeof s.exercises!=='object')return false;
  const keys=Object.keys(s.exercises),expected=Object.keys(catalog).filter(k=>catalog[k].parts.some(p=>s.parts.includes(p)));
- return keys.length===expected.length&&keys.every(k=>expected.includes(k)&&typeof s.exercises[k]?.note==='string'&&(s.exercises[k].feedback===undefined||typeof s.exercises[k].feedback==='string')&&validSets(s.exercises[k].sets,k));
+ return expected.filter(k=>!catalog[k].optionalForLegacy).every(k=>keys.includes(k))&&keys.every(k=>expected.includes(k)&&typeof s.exercises[k]?.note==='string'&&(s.exercises[k].feedback===undefined||typeof s.exercises[k].feedback==='string')&&validSets(s.exercises[k].sets,k));
 }
 export const rowReady=(r,k)=>r.weight!==null&&r.reps!==null&&(r.reps>0||k==='pullUp'&&(r.negativeReps??0)>0);
 export const fineOptions=k=>catalog[k].fineWeights??(['fly','rearDelt'].includes(k)?fineWeights:[0]);

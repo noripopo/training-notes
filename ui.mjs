@@ -1,6 +1,6 @@
-import {dateKey,sessionNames,exerciseKeys,historyGroups,recentDays,calendarParts} from './history.mjs?v=20261020-back';
-import {SHORTCUT_NAME,SETTINGS_KEY,enqueue,pending,shortcutURL} from './delivery.mjs?v=20261020-back';
-import {PREFIX,catalog,bodyParts,fineOptions,rowReady,newSet,createSession,readAll,latest,append,previousSets,performed,totalWeight,restore,setSessionDeleted} from './core.mjs?v=20261020-back';
+import {dateKey,sessionNames,exerciseKeys,historyGroups,recentDays,calendarParts} from './history.mjs?v=20261022-shoulder';
+import {SHORTCUT_NAME,SETTINGS_KEY,enqueue,pending,shortcutURL} from './delivery.mjs?v=20261022-shoulder';
+import {PREFIX,catalog,bodyParts,fineOptions,rowReady,newSet,createSession,readAll,latest,append,previousSets,performed,totalWeight,restore,setSessionDeleted} from './core.mjs?v=20261022-shoulder';
 const app=document.querySelector('#app'),error=document.querySelector('#error');
 let entries=[],sessions=[],active=null,exercise='smith',failed=false,choosingParts=false,viewGroupId=null,editing=false,calendarOpen=false,selectedDate=dateKey(new Date());
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
