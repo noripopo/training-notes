@@ -1,4 +1,4 @@
-import {catalog,performed} from './core.mjs?v=20261022-shoulder';
+import {catalog,performed} from './core.mjs?v=20261022-abs';
 export const dateKey=value=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value));
 export const exerciseKeys=s=>Object.keys(s.exercises).filter(k=>performed(s.exercises[k]).length>0);
 export function sessionNames(s){const done=exerciseKeys(s);const keys=done.length?done:s.endedAt?[]:Object.keys(s.exercises).filter(k=>{const e=s.exercises[k];return e.note||e.feedback||e.sets.some(r=>!r.cancelled&&(r.weight!==null||r.reps!==null));});return keys.map(k=>catalog[k].name).join('・')||(s.endedAt?'実施済みの種目なし':'種目はこれから記録');}

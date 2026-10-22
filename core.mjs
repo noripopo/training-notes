@@ -1,6 +1,6 @@
 export const PREFIX='training-notes-v1:';
 const range=(a,b,d)=>Array.from({length:Math.round((b-a)/d)+1},(_,i)=>Math.round((a+i*d)*10)/10);
-export const bodyParts=['胸','三頭筋','肩','二頭筋','背中'];
+export const bodyParts=['胸','三頭筋','肩','二頭筋','背中','腹筋'];
 const dumbbells=[...range(1,10,1),...range(12,40,2)];
 export const latGrips={bar:'付属バー',wide:'MAG・ワイド',medium:'MAG・ミディアム（回内）',close:'MAG・クローズ（回内）'};
 const stackWeights=[4,9,14,18,23,29,36,43,50,57,63,70,77,84,90,97,104];
@@ -25,6 +25,9 @@ export const catalog={
  bentRow:{name:'ベントオーバーロー',parts:['背中'],weights:range(20,100,2.5),help:'ストレートバー込みの総重量（バー20kg仮設定）'},
  cableRow:{name:'シーテッドケーブルロー',parts:['背中'],weights:stackWeights,legacyWeights:[...range(1,104,1),104.3],fineWeights:[0,2],decimals:1,help:'MATRIX VS-S331 ／ 付属グリップ ／ 写真の表示重量＋追加2kgを記録'},
  cablePullover:{name:'ケーブルプルオーバー',parts:['背中'],weights:pulleyWeights,legacyWeights:range(1,40,1),decimals:1,help:'MATRIX VS-VFT ／ バーグリップ・両手。写真の表示重量を記録'},
+ dragonFlag:{name:'ドラゴンフラッグ',parts:['腹筋'],weights:[0],bodyweight:true,addedWeight:true,help:'自重 ／ 回数をそのまま記録'},
+ abRoller:{name:'腹筋ローラー',parts:['腹筋'],weights:[0],bodyweight:true,addedWeight:true,help:'自重 ／ 回数をそのまま記録'},
+ hangingLegRaise:{name:'ハンギングレッグレイズ',parts:['腹筋'],weights:[0],bodyweight:true,addedWeight:true,grips:{front:'フロント',side:'サイド'},gripLabel:'バリエーション',defaultGrip:'front',help:'自重 ／ セットごとにフロント・サイドを選択。左右の回数は自動で合算しません'},
  dumbbellRow:{name:'ダンベルロー',parts:['背中'],weights:dumbbells,help:'ダンベル片手の重量'}
 };
 export const weights=catalog.smith.weights;
@@ -52,7 +55,7 @@ export function setSessionDeleted(session,deleted){
  const next=normalize(session);next.revision++;next.deletedAt=deleted?new Date().toISOString():null;return next;
 }
 export function createSession(parts=['胸'],sessions=[]){
- const exercises={};for(const [k,c]of Object.entries(catalog))if(c.parts.some(p=>parts.includes(p))){const row=newSet(previousSets(sessions,k)[0]);if(c.grips)row.grip??=c.defaultGrip;if(k==='pullUp')row.negativeReps=0;if(k==='tBarRow'){if(previousSets(sessions,k)[0]&&!row.weightBasis)row.weight=null;row.weightBasis='bar10Included';}exercises[k]={note:'',sets:[row]};}
+ const exercises={};for(const [k,c]of Object.entries(catalog))if(c.parts.some(p=>parts.includes(p))){const row=newSet(previousSets(sessions,k)[0]);if(c.bodyweight)row.weight=0;if(c.grips)row.grip??=c.defaultGrip;if(k==='pullUp')row.negativeReps=0;if(k==='tBarRow'){if(previousSets(sessions,k)[0]&&!row.weightBasis)row.weight=null;row.weightBasis='bar10Included';}exercises[k]={note:'',sets:[row]};}
  return {version:2,id:uuid(),revision:0,startedAt:new Date().toISOString(),endedAt:null,parts:[...parts],exercises};
 }
 export function readAll(storage){const out=[];for(let i=0;i<storage.length;i++){const k=storage.key(i);if(!k?.startsWith(PREFIX))continue;const raw=JSON.parse(storage.getItem(k));const batch=raw.batch??[raw];if(!Array.isArray(batch))throw new Error('保存データが不正です。');for(const e of batch){if(!valid(e.snapshot)||!iso(e.savedAt)||typeof e.reason!=='string')throw new Error('保存データを読み取れません。上書きせず停止しました。');out.push(e);}}return out;}

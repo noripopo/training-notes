@@ -1,4 +1,4 @@
-import {valid} from './core.mjs?v=20261022-shoulder';
+import {valid} from './core.mjs?v=20261022-abs';
 
 export const SHORTCUT_NAME='Training iCloud Bridge';
 export const DELIVERY_PREFIX='training-delivery-v1:';
