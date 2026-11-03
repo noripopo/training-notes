@@ -1,5 +1,5 @@
-import {PREFIX,readAll} from './core.mjs?v=20261031-capacity';
-import {DELIVERY_PREFIX,SETTINGS_KEY} from './delivery.mjs?v=20261031-capacity';
+import {PREFIX,readAll} from './core.mjs?v=20261104-half-deadlift';
+import {DELIVERY_PREFIX,SETTINGS_KEY} from './delivery.mjs?v=20261104-half-deadlift';
 
 export const DB_NAME='training-notes-durable-v1';
 const relevant=k=>k?.startsWith(PREFIX)||k?.startsWith(DELIVERY_PREFIX)||k===SETTINGS_KEY;

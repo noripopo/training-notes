@@ -1,7 +1,7 @@
-import {openStorage,capacityWarning} from './storage.mjs?v=20261031-capacity';
-import {dateKey,sessionNames,exerciseKeys,historyGroups,recentDays,calendarParts} from './history.mjs?v=20261031-capacity';
-import {SHORTCUT_NAME,SETTINGS_KEY,enqueue,pending,shortcutURL} from './delivery.mjs?v=20261031-capacity';
-import {PREFIX,catalog,bodyParts,fineOptions,rowReady,newSet,createSession,readAll,latest,append,previousSets,performed,totalWeight,restore,setSessionDeleted} from './core.mjs?v=20261031-capacity';
+import {openStorage,capacityWarning} from './storage.mjs?v=20261104-half-deadlift';
+import {dateKey,sessionNames,exerciseKeys,historyGroups,recentDays,calendarParts} from './history.mjs?v=20261104-half-deadlift';
+import {SHORTCUT_NAME,SETTINGS_KEY,enqueue,pending,shortcutURL} from './delivery.mjs?v=20261104-half-deadlift';
+import {PREFIX,catalog,bodyParts,fineOptions,rowReady,newSet,createSession,readAll,latest,append,previousSets,performed,totalWeight,restore,setSessionDeleted} from './core.mjs?v=20261104-half-deadlift';
 const app=document.querySelector('#app'),error=document.querySelector('#error');
 let entries=[],sessions=[],active=null,exercise='smith',failed=false,choosingParts=false,viewGroupId=null,editing=false,calendarOpen=false,selectedDate=dateKey(new Date());
 let storage=localStorage,ready=false,pendingMemo=null,memoTimer=null,capacityTimer=null;

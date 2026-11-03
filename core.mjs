@@ -22,6 +22,7 @@ export const catalog={
  pullUp:{name:'懸垂',parts:['背中'],weights:range(0,30,10),addedWeight:true,grips:{standard:'スタンダード',narrow:'ナロー',back:'バック（反対側に体を向ける）'},defaultGrip:'standard',help:'追加重量のみ ／ 0kgは自重'},
  tBarRow:{name:'Tバーロー',parts:['背中'],weights:range(10,110,2.5),legacyWeights:range(0,100,2.5),grips:{standard:'スタンダード',narrow:'ナロー',wide:'ワイド'},defaultGrip:'standard',help:'SPIRIT SP-4231 ／ バー10kg込みの総重量'},
  latPulldown:{name:'ラットプルダウン',parts:['背中'],weights:stackWeights,legacyWeights:[...range(1,104,1),104.3],fineWeights:[0,2],decimals:1,grips:latGrips,defaultGrip:'bar',help:'MATRIX VS-S331 ／ 写真の表示重量＋追加2kgを記録'},
+ halfDeadlift:{name:'ハーフデッドリフト',parts:['背中'],optionalForLegacy:true,weights:range(20,200,2.5),help:'通常のバーベル ／ バー20kg込み・上限200kg（仮設定）'},
  bentRow:{name:'ベントオーバーロー',parts:['背中'],weights:range(20,100,2.5),help:'ストレートバー込みの総重量（バー20kg仮設定）'},
  cableRow:{name:'シーテッドケーブルロー',parts:['背中'],weights:stackWeights,legacyWeights:[...range(1,104,1),104.3],fineWeights:[0,2],decimals:1,help:'MATRIX VS-S331 ／ 付属グリップ ／ 写真の表示重量＋追加2kgを記録'},
  cablePullover:{name:'ケーブルプルオーバー',parts:['背中'],weights:pulleyWeights,legacyWeights:range(1,40,1),decimals:1,help:'MATRIX VS-VFT ／ バーグリップ・両手。写真の表示重量を記録'},
